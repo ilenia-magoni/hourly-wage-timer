@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TimeEntry {
   id: string;
   name: string;
   hourlyWage: number;
   elapsedTime: number;
+}
+
+interface Target {
+  value: number;
+  currency: 'USD' | 'EUR';
 }
 
 const App: React.FC = () => {
@@ -16,10 +21,28 @@ const App: React.FC = () => {
     elapsedTime: 0,
   });
   const [savedEntries, setSavedEntries] = useState<TimeEntry[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [pendingEntry, setPendingEntry] = useState<TimeEntry | null>(null);
-  const [showStopDialog, setShowStopDialog] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [target, setTarget] = useState<Target>({ value: 0, currency: 'USD' });
+  const [celebrateTarget, setCelebrateTarget] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const calculateEarnings = useCallback((entry: TimeEntry): number => {
+    const hours = entry.elapsedTime / 3600;
+    return hours * entry.hourlyWage;
+  }, []);
+
+  const calculateTotalEarnings = useCallback((): number => {
+    const savedEarnings = savedEntries.reduce(
+      (total, entry) => total + calculateEarnings(entry),
+      0
+    );
+    const currentEarnings = calculateEarnings(currentEntry);
+    return savedEarnings + currentEarnings;
+  }, [savedEntries, currentEntry, calculateEarnings]);
+
+  const calculateCurrentSessionEarnings = useCallback((): number => {
+    return calculateEarnings(currentEntry);
+  }, [calculateEarnings, currentEntry]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -40,6 +63,21 @@ const App: React.FC = () => {
     };
   }, [isRunning]);
 
+  useEffect(() => {
+    const totalEarnings = calculateTotalEarnings();
+    const targetInUSD =
+      target.currency === 'USD' ? target.value : target.value * 0.9;
+
+    if (totalEarnings >= targetInUSD && targetInUSD > 0) {
+      setCelebrateTarget(true);
+      if (audioRef.current) {
+        audioRef.current.play();
+      }
+    } else {
+      setCelebrateTarget(false);
+    }
+  }, [calculateTotalEarnings, target]);
+
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -48,12 +86,6 @@ const App: React.FC = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes
       .toString()
       .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const calculateEarnings = (entry: TimeEntry): string => {
-    const hours = entry.elapsedTime / 3600;
-    const earnings = hours * entry.hourlyWage;
-    return earnings.toFixed(2);
   };
 
   const handleStart = () => {
@@ -66,28 +98,42 @@ const App: React.FC = () => {
 
   const handleStop = () => {
     setIsRunning(false);
-    setShowStopDialog(true);
+    setShowSaveDialog(true);
   };
 
   const handleSave = () => {
+    if (currentEntry.elapsedTime === 0) {
+      setShowSaveDialog(false);
+      return;
+    }
+
     const entryToSave = {
       ...currentEntry,
       id: currentEntry.id || Date.now().toString(),
     };
 
-    const existingEntryIndex = savedEntries.findIndex(
-      (entry) => entry.id === entryToSave.id
-    );
+    setSavedEntries((prevEntries) => {
+      const existingEntryIndex = prevEntries.findIndex(
+        (entry) =>
+          entry.name === entryToSave.name &&
+          entry.hourlyWage === entryToSave.hourlyWage
+      );
 
-    if (existingEntryIndex !== -1) {
-      setSavedEntries((prev) => {
-        const newEntries = [...prev];
-        newEntries[existingEntryIndex] = entryToSave;
-        return newEntries;
-      });
-    } else {
-      setSavedEntries((prev) => [...prev, entryToSave]);
-    }
+      if (existingEntryIndex !== -1) {
+        // Merge entries
+        const updatedEntries = [...prevEntries];
+        updatedEntries[existingEntryIndex] = {
+          ...updatedEntries[existingEntryIndex],
+          elapsedTime:
+            updatedEntries[existingEntryIndex].elapsedTime +
+            entryToSave.elapsedTime,
+        };
+        return updatedEntries;
+      } else {
+        // Save as new entry
+        return [...prevEntries, entryToSave];
+      }
+    });
 
     setCurrentEntry({
       id: '',
@@ -95,7 +141,7 @@ const App: React.FC = () => {
       hourlyWage: 0,
       elapsedTime: 0,
     });
-    setShowStopDialog(false);
+    setShowSaveDialog(false);
   };
 
   const handleDiscard = () => {
@@ -105,7 +151,7 @@ const App: React.FC = () => {
       hourlyWage: 0,
       elapsedTime: 0,
     });
-    setShowStopDialog(false);
+    setShowSaveDialog(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,43 +162,14 @@ const App: React.FC = () => {
     }));
   };
 
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-  };
-
-  const startFromSavedEntry = (entry: TimeEntry) => {
-    if (isRunning || currentEntry.elapsedTime > 0) {
-      setShowConfirmation(true);
-      setPendingEntry(entry);
-    } else {
-      startNewSession(entry);
-    }
-  };
-
-  const startNewSession = (entry: TimeEntry) => {
-    setCurrentEntry({
-      id: Date.now().toString(),
-      name: entry.name,
-      hourlyWage: entry.hourlyWage,
-      elapsedTime: 0,
-    });
-    setIsRunning(true);
-  };
-
-  const handleConfirmation = (action: 'keep' | 'save' | 'discard') => {
-    if (action === 'keep') {
-      setShowConfirmation(false);
-      setPendingEntry(null);
-    } else if (action === 'save') {
-      handleSave();
-      startNewSession(pendingEntry!);
-      setShowConfirmation(false);
-      setPendingEntry(null);
-    } else if (action === 'discard') {
-      startNewSession(pendingEntry!);
-      setShowConfirmation(false);
-      setPendingEntry(null);
-    }
+  const handleTargetChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setTarget((prev) => ({
+      ...prev,
+      [name]: name === 'value' ? parseFloat(value) || 0 : value,
+    }));
   };
 
   return (
@@ -166,7 +183,6 @@ const App: React.FC = () => {
           name="name"
           value={currentEntry.name}
           onChange={handleInputChange}
-          disabled={isRunning}
         />
       </div>
       <div>
@@ -179,72 +195,81 @@ const App: React.FC = () => {
           onChange={handleInputChange}
           min="0"
           step="0.01"
-          disabled={isRunning}
         />
       </div>
       <div>
         <h2>{formatTime(currentEntry.elapsedTime)}</h2>
-        <h3>Earnings: ${calculateEarnings(currentEntry)}</h3>
+        <h3>
+          Current Session Earnings: $
+          {calculateCurrentSessionEarnings().toFixed(2)}
+        </h3>
+        <h3>
+          Total Earnings: ${calculateTotalEarnings().toFixed(2)}
+          {celebrateTarget && '🎯🎉'}
+        </h3>
         <button onClick={handleStart} disabled={isRunning}>
           Start
         </button>
         <button onClick={handlePause} disabled={!isRunning}>
           Pause
         </button>
-        <button
-          onClick={handleStop}
-          disabled={!isRunning && currentEntry.elapsedTime === 0}
+        <button onClick={handleStop}>Stop</button>
+      </div>
+      <div>
+        <h3>Set Target</h3>
+        <input
+          type="number"
+          name="value"
+          value={target.value}
+          onChange={handleTargetChange}
+          min="0"
+          step="0.01"
+        />
+        <select
+          name="currency"
+          value={target.currency}
+          onChange={handleTargetChange}
         >
-          Stop
-        </button>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
       </div>
       <div>
         <h2>Saved Entries</h2>
+        <h3>
+          Total Saved: $
+          {savedEntries
+            .reduce((total, entry) => total + calculateEarnings(entry), 0)
+            .toFixed(2)}
+        </h3>
         <ul>
           {savedEntries.map((entry) => (
             <li key={entry.id}>
               {entry.name || 'Unnamed'} - {formatTime(entry.elapsedTime)} - $
-              {calculateEarnings(entry)} - ${entry.hourlyWage.toFixed(2)}/hour
-              <button onClick={() => startFromSavedEntry(entry)}>
-                Start New Session
-              </button>
+              {calculateEarnings(entry).toFixed(2)} - $
+              {entry.hourlyWage.toFixed(2)}/hour
             </li>
           ))}
         </ul>
       </div>
-      {showConfirmation && (
-        <div className="confirmation-dialog">
-          <p>You have an active session. What would you like to do?</p>
-          <button onClick={() => handleConfirmation('keep')}>
-            Keep current session
-          </button>
-          <button onClick={() => handleConfirmation('save')}>
-            Save and start new
-          </button>
-          <button onClick={() => handleConfirmation('discard')}>
-            Discard and start new
-          </button>
-        </div>
-      )}
-      {showStopDialog && (
-        <div className="stop-dialog">
-          <h3>Session Stopped</h3>
-          <p>Would you like to save or discard this session?</p>
+      {showSaveDialog && (
+        <div className="save-dialog">
+          <h3>Save or Discard Session</h3>
           <div>
-            <label htmlFor="stopName">Entry Name: </label>
+            <label htmlFor="saveName">Entry Name: </label>
             <input
               type="text"
-              id="stopName"
+              id="saveName"
               name="name"
               value={currentEntry.name}
               onChange={handleInputChange}
             />
           </div>
           <div>
-            <label htmlFor="stopHourlyWage">Hourly Wage (USD): </label>
+            <label htmlFor="saveHourlyWage">Hourly Wage (USD): </label>
             <input
               type="number"
-              id="stopHourlyWage"
+              id="saveHourlyWage"
               name="hourlyWage"
               value={currentEntry.hourlyWage}
               onChange={handleInputChange}
@@ -256,6 +281,7 @@ const App: React.FC = () => {
           <button onClick={handleDiscard}>Discard</button>
         </div>
       )}
+      <audio ref={audioRef} src="/music.mp3" />
     </div>
   );
 };
