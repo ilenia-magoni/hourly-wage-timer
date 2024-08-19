@@ -3,6 +3,7 @@ export interface TimeEntry {
   name: string;
   hourlyWage: number;
   elapsedTime: number;
+  isEditing?: boolean; // New property
 }
 
 export interface Target {

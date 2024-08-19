@@ -28,6 +28,7 @@ const App: React.FC = () => {
     handleEditTarget,
     calculateCurrentSessionEarnings,
     calculateTotalEarnings,
+    updateEntry,
   } = useTimeTracker();
 
   return (
@@ -61,6 +62,7 @@ const App: React.FC = () => {
           <SavedEntries
             savedEntries={savedEntries}
             calculateTotalEarnings={calculateTotalEarnings}
+            updateEntry={updateEntry} // Add this line
           />
           {showSaveDialog && (
             <SaveDialog

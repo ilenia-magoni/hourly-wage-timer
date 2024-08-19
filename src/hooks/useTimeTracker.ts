@@ -183,6 +183,12 @@ const useTimeTracker = () => {
     setShowTimer(false);
   };
 
+  const updateEntry = (updatedEntry: TimeEntry) => {
+    setSavedEntries((entries) =>
+      entries.map((e) => (e.id === updatedEntry.id ? updatedEntry : e))
+    );
+  };
+
   return {
     isRunning,
     currentEntry,
@@ -204,6 +210,7 @@ const useTimeTracker = () => {
     handleEditTarget,
     calculateCurrentSessionEarnings,
     calculateTotalEarnings,
+    updateEntry,
   };
 };
 

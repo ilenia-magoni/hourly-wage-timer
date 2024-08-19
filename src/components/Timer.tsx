@@ -1,6 +1,7 @@
 import React from 'react';
 import { TimeEntry } from '../types';
 import { formatTime } from '../utils/timeUtils';
+import '../styles/TimeTracker.css';
 
 interface TimerProps {
   currentEntry: TimeEntry;

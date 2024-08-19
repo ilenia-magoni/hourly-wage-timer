@@ -1,0 +1,70 @@
+/* Component: Timer */
+.timer {
+  background-color: #f0f0f0;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.timer h2 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+/* Component: SavedEntries */
+.saved-entries {
+  margin-top: 20px;
+}
+
+.saved-entries ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.saved-entries li {
+  background-color: #f9f9f9;
+  border-left: 3px solid #007bff;
+  margin-bottom: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.saved-entries button {
+  background-color: #28a745;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+/* Component: EditableEntry */
+.editable-entry {
+  background-color: #e9ecef;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.editable-entry input {
+  margin-right: 10px;
+  padding: 5px;
+}
+
+.editable-entry button {
+  margin-left: 5px;
+}
+
+/* General button styles */
+button {
+  cursor: pointer;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
