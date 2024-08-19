@@ -6,19 +6,26 @@ interface TargetSetterProps {
   handleTargetChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => void;
+  handleSetTarget: () => void;
+  handleSkipTarget: () => void;
 }
 
 const TargetSetter: React.FC<TargetSetterProps> = ({
   target,
   handleTargetChange,
+  handleSetTarget,
+  handleSkipTarget,
 }) => {
   return (
     <div>
-      <h3>Set Target</h3>
+      <h2>Set Your Earnings Target</h2>
+      <p>
+        Set a target to achieve or skip to start tracking time without a target.
+      </p>
       <input
         type="number"
-        name="value"
-        value={target.value}
+        name="originalValue"
+        value={target.originalValue}
         onChange={handleTargetChange}
         min="0"
         step="0.01"
@@ -28,9 +35,13 @@ const TargetSetter: React.FC<TargetSetterProps> = ({
         value={target.currency}
         onChange={handleTargetChange}
       >
-        <option value="USD">USD</option>
         <option value="EUR">EUR</option>
+        <option value="USD">USD</option>
       </select>
+      <div>
+        <button onClick={handleSetTarget}>Set Target</button>
+        <button onClick={handleSkipTarget}>Skip Target</button>
+      </div>
     </div>
   );
 };

@@ -6,6 +6,8 @@ export interface TimeEntry {
 }
 
 export interface Target {
-  value: number;
+  originalValue: number;
+  displayValue: number; // Value to display in USD
+  comparisonValue: number; // Value to compare with total earnings
   currency: 'USD' | 'EUR';
 }

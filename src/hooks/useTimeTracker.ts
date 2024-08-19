@@ -12,10 +12,29 @@ const useTimeTracker = () => {
   });
   const [savedEntries, setSavedEntries] = useState<TimeEntry[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [target, setTarget] = useState<Target>({ value: 0, currency: 'USD' });
+  const [target, setTarget] = useState<Target>({
+    originalValue: 0,
+    displayValue: 0,
+    comparisonValue: 0,
+    currency: 'EUR',
+  });
   const [celebrateTarget, setCelebrateTarget] = useState(false);
+  const [showTimer, setShowTimer] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // This function returns the amount to display in USD
+  const calculateDisplayTarget = (targetState: Target): number => {
+    return targetState.currency === 'USD'
+      ? targetState.originalValue / 0.7
+      : targetState.originalValue / 0.8 / 0.7; // Convert EUR to USD and then divide by 0.7
+  };
+
+  // This function returns the amount to compare with the total earnings
+  const calculateComparisonTarget = (targetState: Target): number => {
+    return targetState.currency === 'USD'
+      ? targetState.originalValue / 0.7
+      : targetState.originalValue; // Keep original EUR value for comparison
+  };
   const calculateTotalEarnings = useCallback((): number => {
     const savedEarnings = savedEntries.reduce(
       (total, entry) => total + calculateEarnings(entry),
@@ -50,10 +69,8 @@ const useTimeTracker = () => {
 
   useEffect(() => {
     const totalEarnings = calculateTotalEarnings();
-    const targetInUSD =
-      target.currency === 'USD' ? target.value : target.value * 0.9;
 
-    if (totalEarnings >= targetInUSD && targetInUSD > 0) {
+    if (totalEarnings >= target.comparisonValue && target.comparisonValue > 0) {
       setCelebrateTarget(true);
       if (audioRef.current) {
         audioRef.current.play();
@@ -133,10 +150,37 @@ const useTimeTracker = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setTarget((prev) => ({
-      ...prev,
-      [name]: name === 'value' ? parseFloat(value) || 0 : value,
-    }));
+    setTarget((prev) => {
+      const updatedTarget: Target = {
+        ...prev,
+        [name]: name === 'originalValue' ? parseFloat(value) || 0 : value,
+      };
+      const displayValue = calculateDisplayTarget(updatedTarget);
+      const comparisonValue = calculateComparisonTarget(updatedTarget);
+      return {
+        ...updatedTarget,
+        displayValue,
+        comparisonValue,
+      };
+    });
+  };
+
+  const handleSetTarget = () => {
+    setShowTimer(true);
+  };
+
+  const handleSkipTarget = () => {
+    setTarget({
+      originalValue: 0,
+      displayValue: 0,
+      comparisonValue: 0,
+      currency: 'USD',
+    });
+    setShowTimer(true);
+  };
+
+  const handleEditTarget = () => {
+    setShowTimer(false);
   };
 
   return {
@@ -147,6 +191,7 @@ const useTimeTracker = () => {
     target,
     celebrateTarget,
     audioRef,
+    showTimer,
     handleStart,
     handlePause,
     handleStop,
@@ -154,6 +199,9 @@ const useTimeTracker = () => {
     handleDiscard,
     handleInputChange,
     handleTargetChange,
+    handleSetTarget,
+    handleSkipTarget,
+    handleEditTarget,
     calculateCurrentSessionEarnings,
     calculateTotalEarnings,
   };

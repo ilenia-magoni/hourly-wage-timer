@@ -15,6 +15,7 @@ const App: React.FC = () => {
     target,
     celebrateTarget,
     audioRef,
+    showTimer,
     handleStart,
     handlePause,
     handleStop,
@@ -22,6 +23,9 @@ const App: React.FC = () => {
     handleDiscard,
     handleInputChange,
     handleTargetChange,
+    handleSetTarget,
+    handleSkipTarget,
+    handleEditTarget,
     calculateCurrentSessionEarnings,
     calculateTotalEarnings,
   } = useTimeTracker();
@@ -29,31 +33,50 @@ const App: React.FC = () => {
   return (
     <div className="App">
       <h1>Time Tracker</h1>
-      <TimeEntry
-        currentEntry={currentEntry}
-        handleInputChange={handleInputChange}
-      />
-      <Timer
-        currentEntry={currentEntry}
-        isRunning={isRunning}
-        celebrateTarget={celebrateTarget}
-        handleStart={handleStart}
-        handlePause={handlePause}
-        handleStop={handleStop}
-        calculateCurrentSessionEarnings={calculateCurrentSessionEarnings}
-        calculateTotalEarnings={calculateTotalEarnings}
-      />
-      <TargetSetter target={target} handleTargetChange={handleTargetChange} />
-      <SavedEntries
-        savedEntries={savedEntries}
-        calculateTotalEarnings={calculateTotalEarnings}
-      />
-      {showSaveDialog && (
-        <SaveDialog
-          currentEntry={currentEntry}
-          handleInputChange={handleInputChange}
-          handleSave={handleSave}
-          handleDiscard={handleDiscard}
+      {showTimer ? (
+        <>
+          <div>
+            <h4>
+              Target:{' '}
+              {target.displayValue > 0
+                ? `$${target.displayValue.toFixed(2)}`
+                : 'No target set'}
+            </h4>
+            <button onClick={handleEditTarget}>Edit Target</button>
+          </div>
+          <TimeEntry
+            currentEntry={currentEntry}
+            handleInputChange={handleInputChange}
+          />
+          <Timer
+            currentEntry={currentEntry}
+            isRunning={isRunning}
+            celebrateTarget={celebrateTarget}
+            handleStart={handleStart}
+            handlePause={handlePause}
+            handleStop={handleStop}
+            calculateCurrentSessionEarnings={calculateCurrentSessionEarnings}
+            calculateTotalEarnings={calculateTotalEarnings}
+          />
+          <SavedEntries
+            savedEntries={savedEntries}
+            calculateTotalEarnings={calculateTotalEarnings}
+          />
+          {showSaveDialog && (
+            <SaveDialog
+              currentEntry={currentEntry}
+              handleInputChange={handleInputChange}
+              handleSave={handleSave}
+              handleDiscard={handleDiscard}
+            />
+          )}
+        </>
+      ) : (
+        <TargetSetter
+          target={target}
+          handleTargetChange={handleTargetChange}
+          handleSetTarget={handleSetTarget}
+          handleSkipTarget={handleSkipTarget}
         />
       )}
       <audio ref={audioRef} src="/music.mp3" />
